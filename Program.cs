@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Pet;
@@ -8,7 +9,21 @@ internal static class Program
     [STAThread]
     private static void Main()
     {
-        ApplicationConfiguration.Initialize();
-        Application.Run(new PetForm());
+        try
+        {
+            ApplicationConfiguration.Initialize();
+            Application.Run(new PetForm());
+        }
+        catch (Exception ex)
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "crash.txt");
+            File.WriteAllText(path, ex.ToString());
+            MessageBox.Show(
+                ex.ToString(),
+                "Clip crashed",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
     }
 }

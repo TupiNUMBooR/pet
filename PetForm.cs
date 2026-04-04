@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace Pet;
@@ -25,6 +26,10 @@ public sealed class PetForm : Form
 
     private float moveAngle;
     private float moveScale = 1f;
+
+    private const string SpriteResourceName = "Pet.assets.pet.png";
+    private const string IconResourceName = "Pet.assets.icon.ico";
+    private const string TrayText = "Clip";
 
     private const int OffsetX = 120;
     private const int OffsetY = -70;
@@ -57,35 +62,14 @@ public sealed class PetForm : Form
 
     public PetForm()
     {
-        string assetDir = Path.Combine(AppContext.BaseDirectory, "assets");
-        string spritePath = Path.Combine(assetDir, "pet.png");
-        string iconPath = Path.Combine(assetDir, "icon.ico");
+        sprite = LoadBitmapResource(SpriteResourceName);
 
-        sprite = new Bitmap(spritePath);
-
-        FormBorderStyle = FormBorderStyle.None;
-        StartPosition = FormStartPosition.Manual;
-        ShowInTaskbar = false;
-        TopMost = true;
-
-        Width = (int)Math.Ceiling(sprite.Width * MaxScale);
-        Height = (int)Math.Ceiling(sprite.Height * MaxScale);
-
-        x = Cursor.Position.X - Width / 2.0 + OffsetX;
-        y = Cursor.Position.Y - Height / 2.0 + OffsetY;
-
-        trayIcon.Icon = new Icon(iconPath);
-        trayIcon.Text = "Clip";
-        trayIcon.Visible = true;
-
-        trayMenu.Items.Add("Exit", null, (_, _) => Close());
-        trayIcon.ContextMenuStrip = trayMenu;
+        ConfigureWindow();
+        InitializePosition();
+        InitializeTray();
+        InitializeTimer();
 
         MouseDown += OnPetMouseDown;
-
-        timer.Interval = TickMs;
-        timer.Tick += OnTick;
-        timer.Start();
     }
 
     protected override void OnShown(EventArgs e)
@@ -99,39 +83,84 @@ public sealed class PetForm : Form
         timer.Stop();
         timer.Dispose();
 
-        if (menuForm is not null)
-        {
-            menuForm.FormClosed -= OnMenuClosed;
-
-            if (!menuForm.IsDisposed)
-            {
-                menuForm.Close();
-                menuForm.Dispose();
-            }
-
-            menuForm = null;
-        }
-
-        trayIcon.Visible = false;
-        trayIcon.Dispose();
-        trayMenu.Dispose();
-
+        CloseMenu();
+        DisposeTray();
         sprite.Dispose();
 
         base.OnFormClosed(e);
+    }
+
+    private void ConfigureWindow()
+    {
+        FormBorderStyle = FormBorderStyle.None;
+        StartPosition = FormStartPosition.Manual;
+        ShowInTaskbar = false;
+        TopMost = true;
+
+        Width = (int)Math.Ceiling(sprite.Width * MaxScale);
+        Height = (int)Math.Ceiling(sprite.Height * MaxScale);
+    }
+
+    private void InitializePosition()
+    {
+        Point cursor = Cursor.Position;
+        x = cursor.X - Width / 2.0 + OffsetX;
+        y = cursor.Y - Height / 2.0 + OffsetY;
+    }
+
+    private void InitializeTray()
+    {
+        trayIcon.Icon = LoadIconResource(IconResourceName);
+        trayIcon.Text = TrayText;
+        trayIcon.Visible = true;
+
+        trayMenu.Items.Add("Exit", null, (_, _) => Close());
+        trayIcon.ContextMenuStrip = trayMenu;
+    }
+
+    private void InitializeTimer()
+    {
+        timer.Interval = TickMs;
+        timer.Tick += OnTick;
+        timer.Start();
+    }
+
+    private void DisposeTray()
+    {
+        trayIcon.Visible = false;
+        trayIcon.Dispose();
+        trayMenu.Dispose();
+    }
+
+    private void CloseMenu()
+    {
+        if (menuForm is null)
+        {
+            return;
+        }
+
+        menuForm.FormClosed -= OnMenuClosed;
+
+        if (!menuForm.IsDisposed)
+        {
+            menuForm.Close();
+            menuForm.Dispose();
+        }
+
+        menuForm = null;
     }
 
     private void OnTick(object? sender, EventArgs e)
     {
         animator.Update(Environment.TickCount64);
 
-        if (!isPaused)
+        if (isPaused)
         {
-            UpdateMovement();
+            UpdatePausedMotionEffects();
         }
         else
         {
-            UpdatePausedMotionEffects();
+            UpdateMovement();
         }
 
         UpdateMenuPosition();
@@ -162,9 +191,9 @@ public sealed class PetForm : Form
 
         if (speed > MaxSpeed)
         {
-            double k = MaxSpeed / speed;
-            vx *= k;
-            vy *= k;
+            double factor = MaxSpeed / speed;
+            vx *= factor;
+            vy *= factor;
             speed = MaxSpeed;
         }
 
@@ -189,8 +218,18 @@ public sealed class PetForm : Form
         vx = 0.0;
         vy = 0.0;
 
-        moveAngle += (0f - moveAngle) * TiltResponse;
+        moveAngle += -moveAngle * TiltResponse;
         moveScale += (1f - moveScale) * IdleScaleResponse;
+    }
+
+    private void UpdateMotionEffects(double speed)
+    {
+        float normalizedSpeed = (float)Math.Min(speed / MaxSpeed, 1.0);
+        float targetAngle = (float)(vx / MaxSpeed) * MaxTiltAngle;
+        float targetScale = 1f + normalizedSpeed * MaxMoveScaleBoost;
+
+        moveAngle += (targetAngle - moveAngle) * TiltResponse;
+        moveScale += (targetScale - moveScale) * IdleScaleResponse;
     }
 
     private void OnPetMouseDown(object? sender, MouseEventArgs e)
@@ -286,17 +325,6 @@ public sealed class PetForm : Form
         menuForm.Location = new Point(menuX, menuY);
     }
 
-    private void UpdateMotionEffects(double speed)
-    {
-        float normalizedSpeed = (float)Math.Min(speed / MaxSpeed, 1.0);
-
-        float targetAngle = (float)(vx / MaxSpeed) * MaxTiltAngle;
-        float targetScale = 1f + normalizedSpeed * MaxMoveScaleBoost;
-
-        moveAngle += (targetAngle - moveAngle) * TiltResponse;
-        moveScale += (targetScale - moveScale) * IdleScaleResponse;
-    }
-
     private Bitmap RenderFrame()
     {
         Bitmap frame = new(Width, Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -372,5 +400,34 @@ public sealed class PetForm : Form
             NativeMethods.DeleteDC(memDc);
             NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
         }
+    }
+
+    private static Bitmap LoadBitmapResource(string resourceName)
+    {
+        using Stream stream = OpenResourceStream(resourceName);
+        using Image image = Image.FromStream(stream);
+        return new Bitmap(image);
+    }
+
+    private static Icon LoadIconResource(string resourceName)
+    {
+        using Stream stream = OpenResourceStream(resourceName);
+        return new Icon(stream);
+    }
+
+    private static Stream OpenResourceStream(string resourceName)
+    {
+        Assembly assembly = typeof(PetForm).Assembly;
+        Stream? stream = assembly.GetManifestResourceStream(resourceName);
+
+        if (stream is not null)
+        {
+            return stream;
+        }
+
+        throw new InvalidOperationException(
+            "Embedded resource not found: " + resourceName + Environment.NewLine +
+            "Available resources:" + Environment.NewLine +
+            string.Join(Environment.NewLine, assembly.GetManifestResourceNames()));
     }
 }
