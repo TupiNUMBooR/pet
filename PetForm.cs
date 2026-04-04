@@ -22,13 +22,13 @@ public sealed class PetForm : Form
     private float moveAngle;
     private float moveScale = 1f;
 
-    private const int OffsetX = 48;
-    private const int OffsetY = -96;
+    private const int OffsetX = 120;
+    private const int OffsetY = -70;
     private const byte WindowOpacity = 220;
     private const int TickMs = 8;
     private const float MaxScale = 1.4f;
 
-    private const double Acceleration = 0.035;
+    private const double Acceleration = 0.005;
     private const double Damping = 0.90;
     private const double MaxSpeed = 18.0;
     private const double StopDistance = 0.5;
@@ -155,6 +155,7 @@ public sealed class PetForm : Form
         {
             case MouseButtons.Left:
                 vx += 8.0;
+                vy -= 6.0;
                 UpdateLayered();
                 break;
 
