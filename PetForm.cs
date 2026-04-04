@@ -14,6 +14,9 @@ public sealed class PetForm : Form
     private readonly ContextMenuStrip trayMenu = new();
     private readonly PetAnimator animator = new();
 
+    private PetMenuForm? menuForm;
+    private bool isPaused;
+
     private double x;
     private double y;
     private double vx;
@@ -37,6 +40,9 @@ public sealed class PetForm : Form
     private const float TiltResponse = 0.18f;
     private const float IdleScaleResponse = 0.12f;
     private const float MaxMoveScaleBoost = 0.06f;
+
+    private const int MenuOffsetX = 24;
+    private const int MenuOffsetY = 12;
 
     protected override CreateParams CreateParams
     {
@@ -92,6 +98,12 @@ public sealed class PetForm : Form
         timer.Stop();
         timer.Dispose();
 
+        if (menuForm is not null && !menuForm.IsDisposed)
+        {
+            menuForm.Close();
+            menuForm.Dispose();
+        }
+
         trayIcon.Visible = false;
         trayIcon.Dispose();
         trayMenu.Dispose();
@@ -102,6 +114,23 @@ public sealed class PetForm : Form
     }
 
     private void OnTick(object? sender, EventArgs e)
+    {
+        animator.Update(Environment.TickCount64);
+
+        if (!isPaused)
+        {
+            UpdateMovement();
+        }
+        else
+        {
+            UpdatePausedMotionEffects();
+        }
+
+        UpdateMenuPosition();
+        UpdateLayered();
+    }
+
+    private void UpdateMovement()
     {
         Point mouse = Cursor.Position;
 
@@ -144,9 +173,16 @@ public sealed class PetForm : Form
             y += vy;
         }
 
-        animator.Update(Environment.TickCount64);
         UpdateMotionEffects(speed);
-        UpdateLayered();
+    }
+
+    private void UpdatePausedMotionEffects()
+    {
+        vx = 0.0;
+        vy = 0.0;
+
+        moveAngle += (0f - moveAngle) * TiltResponse;
+        moveScale += (1f - moveScale) * IdleScaleResponse;
     }
 
     private void OnPetMouseDown(object? sender, MouseEventArgs e)
@@ -154,15 +190,82 @@ public sealed class PetForm : Form
         switch (e.Button)
         {
             case MouseButtons.Left:
-                vx += 8.0;
-                vy -= 6.0;
-                UpdateLayered();
+                if (!isPaused)
+                {
+                    vx += 8.0;
+                    vy -= 6.0;
+                    UpdateLayered();
+                }
+                break;
+
+            case MouseButtons.Right:
+                ToggleMenu();
                 break;
 
             case MouseButtons.Middle:
                 Close();
                 break;
         }
+    }
+
+    private void ToggleMenu()
+    {
+        if (menuForm is not null && !menuForm.IsDisposed)
+        {
+            menuForm.Close();
+            return;
+        }
+
+        menuForm = new PetMenuForm();
+        menuForm.FormClosed += OnMenuClosed;
+
+        isPaused = true;
+        UpdatePausedMotionEffects();
+        UpdateMenuPosition();
+
+        menuForm.Show();
+        menuForm.BringToFront();
+    }
+
+    private void OnMenuClosed(object? sender, FormClosedEventArgs e)
+    {
+        if (menuForm is not null)
+        {
+            menuForm.FormClosed -= OnMenuClosed;
+            menuForm = null;
+        }
+
+        isPaused = false;
+    }
+
+    private void UpdateMenuPosition()
+    {
+        if (menuForm is null || menuForm.IsDisposed)
+        {
+            return;
+        }
+
+        int menuX = (int)Math.Round(x) + Width + MenuOffsetX;
+        int menuY = (int)Math.Round(y) + MenuOffsetY;
+
+        Rectangle area = Screen.FromPoint(new Point((int)Math.Round(x), (int)Math.Round(y))).WorkingArea;
+
+        if (menuX + menuForm.Width > area.Right)
+        {
+            menuX = (int)Math.Round(x) - menuForm.Width - MenuOffsetX;
+        }
+
+        if (menuY + menuForm.Height > area.Bottom)
+        {
+            menuY = area.Bottom - menuForm.Height;
+        }
+
+        if (menuY < area.Top)
+        {
+            menuY = area.Top;
+        }
+
+        menuForm.Location = new Point(menuX, menuY);
     }
 
     private void UpdateMotionEffects(double speed)
