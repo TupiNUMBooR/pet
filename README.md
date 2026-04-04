@@ -5,8 +5,8 @@
 Klip is a desktop pet for Windows.
 
 - Follows the cursor
-- Keeps your clipboard text you can edit
-- Shows clipboard images
+- Shows clipboard text or images
+- Lets you edit clipboard text (plain text only)
 - Lives in the system tray
 - Wobbles
 - Written in C# and WinForms
