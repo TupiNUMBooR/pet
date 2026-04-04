@@ -10,14 +10,18 @@ internal sealed class PetAnimator
     private long animationStartedAtMs;
     private long nextAnimationAtMs;
 
-    private float moveAngle;
-    private float moveScale = 1f;
+    private float baseAngle;
+    private float baseScale = 1f;
+
+    private float motionAngle;
+    private float motionScale = 1f;
+
+    private const double MaxSpeed = 18.0;
 
     private const float MaxTiltAngle = 10f;
     private const float TiltResponse = 0.18f;
     private const float ScaleResponse = 0.12f;
     private const float MaxMoveScaleBoost = 0.06f;
-    private const double MaxSpeed = 18.0;
 
     public float Angle { get; private set; }
     public float Scale { get; private set; } = 1f;
@@ -29,19 +33,19 @@ internal sealed class PetAnimator
 
     public void Update(long now, double vx, double speed, bool isPaused)
     {
-        UpdateIdleAnimation(now);
-        UpdateMovementEffects(vx, speed, isPaused);
+        UpdateBaseAnimation(now);
+        UpdateMotionAnimation(vx, speed, isPaused);
 
-        Angle += moveAngle;
-        Scale *= moveScale;
+        Angle = baseAngle + motionAngle;
+        Scale = baseScale * motionScale;
     }
 
-    private void UpdateIdleAnimation(long now)
+    private void UpdateBaseAnimation(long now)
     {
         if (currentAnimation == IdleAnimation.None)
         {
-            Angle = 0f;
-            Scale = 1f;
+            baseAngle = 0f;
+            baseScale = 1f;
 
             if (now >= nextAnimationAtMs)
             {
@@ -70,12 +74,12 @@ internal sealed class PetAnimator
         }
     }
 
-    private void UpdateMovementEffects(double vx, double speed, bool isPaused)
+    private void UpdateMotionAnimation(double vx, double speed, bool isPaused)
     {
         if (isPaused)
         {
-            moveAngle += -moveAngle * TiltResponse;
-            moveScale += (1f - moveScale) * ScaleResponse;
+            motionAngle += -motionAngle * TiltResponse;
+            motionScale += (1f - motionScale) * ScaleResponse;
             return;
         }
 
@@ -83,13 +87,13 @@ internal sealed class PetAnimator
         float targetAngle = (float)(vx / MaxSpeed) * MaxTiltAngle;
         float targetScale = 1f + normalizedSpeed * MaxMoveScaleBoost;
 
-        moveAngle += (targetAngle - moveAngle) * TiltResponse;
-        moveScale += (targetScale - moveScale) * ScaleResponse;
+        motionAngle += (targetAngle - motionAngle) * TiltResponse;
+        motionScale += (targetScale - motionScale) * ScaleResponse;
     }
 
     private void UpdateShake(double t, long now)
     {
-        const double duration = 0.75;
+        const double duration = 0.9;
         const double frequency = 10.0;
         const float amplitude = 14f;
 
@@ -99,14 +103,14 @@ internal sealed class PetAnimator
             return;
         }
 
-        double falloff = 1.0 - (t / duration);
-        Angle = (float)(Math.Sin(t * Math.PI * 2.0 * frequency) * amplitude * falloff);
-        Scale = 1f;
+        float intensity = GetFadeIntensity(t, duration, 0.18);
+        baseAngle = (float)(Math.Sin(t * Math.PI * 2.0 * frequency) * amplitude * intensity);
+        baseScale = 1f;
     }
 
     private void UpdateLook(double t, long now)
     {
-        const double duration = 2.4;
+        const double duration = 2.6;
         const float amplitude = 12f;
 
         if (t >= duration)
@@ -116,13 +120,15 @@ internal sealed class PetAnimator
         }
 
         double phase = t / duration;
-        Angle = (float)(Math.Sin(phase * Math.PI * 4.0) * amplitude);
-        Scale = 1f;
+        float intensity = GetFadeIntensity(t, duration, 0.22);
+
+        baseAngle = (float)(Math.Sin(phase * Math.PI * 4.0) * amplitude * intensity);
+        baseScale = 1f;
     }
 
     private void UpdateBounce(double t, long now)
     {
-        const double duration = 1.5;
+        const double duration = 1.7;
         const double cycles = 2.5;
         const float amplitude = 0.2f;
 
@@ -133,15 +139,39 @@ internal sealed class PetAnimator
         }
 
         double wave = Math.Sin((t / duration) * Math.PI * 2.0 * cycles);
-        Scale = 1f + (float)(wave * amplitude);
-        Angle = 0f;
+        float intensity = GetFadeIntensity(t, duration, 0.2);
+
+        baseScale = 1f + (float)(wave * amplitude * intensity);
+        baseAngle = 0f;
+    }
+
+    private static float GetFadeIntensity(double t, double duration, double fadeFraction)
+    {
+        double fadeDuration = duration * fadeFraction;
+
+        if (fadeDuration <= 0.0)
+        {
+            return 1f;
+        }
+
+        double fadeIn = Math.Min(t / fadeDuration, 1.0);
+        double fadeOut = Math.Min((duration - t) / fadeDuration, 1.0);
+        double intensity = Math.Min(fadeIn, fadeOut);
+
+        return SmoothStep((float)intensity);
+    }
+
+    private static float SmoothStep(float value)
+    {
+        value = Math.Clamp(value, 0f, 1f);
+        return value * value * (3f - 2f * value);
     }
 
     private void EndAnimation(long now)
     {
         currentAnimation = IdleAnimation.None;
-        Angle = 0f;
-        Scale = 1f;
+        baseAngle = 0f;
+        baseScale = 1f;
         ScheduleNextAnimation(now);
     }
 

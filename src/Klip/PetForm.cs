@@ -151,13 +151,12 @@ public sealed class PetForm : Form
 
     private void OnTick(object? sender, EventArgs e)
     {
-        double speed;
+        double speed = 0.0;
 
         if (isPaused)
         {
             vx = 0.0;
             vy = 0.0;
-            speed = 0.0;
         }
         else
         {
