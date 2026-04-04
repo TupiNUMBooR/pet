@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Pet;
@@ -21,19 +20,12 @@ public sealed class PetForm : Form
     private const double FollowSpeed = 0.05;
     private const byte WindowOpacity = 220;
 
-    private const int WS_EX_LAYERED = 0x00080000;
-    private const int WS_EX_TOOLWINDOW = 0x00000080;
-
-    private const int ULW_ALPHA = 0x00000002;
-    private const byte AC_SRC_OVER = 0x00;
-    private const byte AC_SRC_ALPHA = 0x01;
-
     protected override CreateParams CreateParams
     {
         get
         {
             CreateParams cp = base.CreateParams;
-            cp.ExStyle |= WS_EX_LAYERED | WS_EX_TOOLWINDOW;
+            cp.ExStyle |= NativeMethods.WS_EX_LAYERED | NativeMethods.WS_EX_TOOLWINDOW;
             return cp;
         }
     }
@@ -50,7 +42,6 @@ public sealed class PetForm : Form
         StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = false;
         TopMost = true;
-
         Width = sprite.Width;
         Height = sprite.Height;
 
@@ -69,8 +60,6 @@ public sealed class PetForm : Form
         timer.Interval = 8;
         timer.Tick += OnTick;
         timer.Start();
-
-        UpdateLayered();
     }
 
     protected override void OnShown(EventArgs e)
@@ -96,7 +85,6 @@ public sealed class PetForm : Form
     private void OnTick(object? sender, EventArgs e)
     {
         Point mouse = Cursor.Position;
-
         double targetX = mouse.X + OffsetX;
         double targetY = mouse.Y - OffsetY;
 
@@ -113,128 +101,60 @@ public sealed class PetForm : Form
             return;
         }
 
-        x += 1000;
-        y += 1000;
-
+        x += 100;
         UpdateLayered();
     }
 
     private void UpdateLayered()
     {
-        IntPtr screenDc = GetDC(IntPtr.Zero);
-        IntPtr memDc = CreateCompatibleDC(screenDc);
+        IntPtr screenDc = NativeMethods.GetDC(IntPtr.Zero);
+        IntPtr memDc = NativeMethods.CreateCompatibleDC(screenDc);
         IntPtr hBitmap = IntPtr.Zero;
         IntPtr oldBitmap = IntPtr.Zero;
 
         try
         {
             hBitmap = sprite.GetHbitmap(Color.FromArgb(0));
-            oldBitmap = SelectObject(memDc, hBitmap);
+            oldBitmap = NativeMethods.SelectObject(memDc, hBitmap);
 
-            SIZE size = new(sprite.Width, sprite.Height);
-            POINT sourcePoint = new(0, 0);
-            POINT topPos = new((int)Math.Round(x), (int)Math.Round(y));
+            NativeMethods.POINT position = new((int)Math.Round(x), (int)Math.Round(y));
+            NativeMethods.POINT source = new(0, 0);
+            NativeMethods.SIZE size = new(sprite.Width, sprite.Height);
 
-            BLENDFUNCTION blend = new()
+            NativeMethods.BLENDFUNCTION blend = new()
             {
-                BlendOp = AC_SRC_OVER,
+                BlendOp = NativeMethods.AC_SRC_OVER,
                 BlendFlags = 0,
                 SourceConstantAlpha = WindowOpacity,
-                AlphaFormat = AC_SRC_ALPHA
+                AlphaFormat = NativeMethods.AC_SRC_ALPHA
             };
 
-            UpdateLayeredWindow(
+            NativeMethods.UpdateLayeredWindow(
                 Handle,
                 screenDc,
-                ref topPos,
+                ref position,
                 ref size,
                 memDc,
-                ref sourcePoint,
+                ref source,
                 0,
                 ref blend,
-                ULW_ALPHA
+                NativeMethods.ULW_ALPHA
             );
         }
         finally
         {
             if (oldBitmap != IntPtr.Zero)
             {
-                SelectObject(memDc, oldBitmap);
+                NativeMethods.SelectObject(memDc, oldBitmap);
             }
 
             if (hBitmap != IntPtr.Zero)
             {
-                DeleteObject(hBitmap);
+                NativeMethods.DeleteObject(hBitmap);
             }
 
-            DeleteDC(memDc);
-            ReleaseDC(IntPtr.Zero, screenDc);
+            NativeMethods.DeleteDC(memDc);
+            NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
         }
-    }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UpdateLayeredWindow(
-        IntPtr hwnd,
-        IntPtr hdcDst,
-        ref POINT pptDst,
-        ref SIZE psize,
-        IntPtr hdcSrc,
-        ref POINT pprSrc,
-        int crKey,
-        ref BLENDFUNCTION pblend,
-        int dwFlags
-    );
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
-
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern bool DeleteDC(IntPtr hdc);
-
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
-
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern bool DeleteObject(IntPtr hObject);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT
-    {
-        public int X;
-        public int Y;
-
-        public POINT(int x, int y)
-        {
-            X = x;
-            Y = y;
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct SIZE
-    {
-        public int CX;
-        public int CY;
-
-        public SIZE(int cx, int cy)
-        {
-            CX = cx;
-            CY = cy;
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct BLENDFUNCTION
-    {
-        public byte BlendOp;
-        public byte BlendFlags;
-        public byte SourceConstantAlpha;
-        public byte AlphaFormat;
     }
 }
