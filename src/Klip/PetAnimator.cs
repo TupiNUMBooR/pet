@@ -10,6 +10,15 @@ internal sealed class PetAnimator
     private long animationStartedAtMs;
     private long nextAnimationAtMs;
 
+    private float moveAngle;
+    private float moveScale = 1f;
+
+    private const float MaxTiltAngle = 10f;
+    private const float TiltResponse = 0.18f;
+    private const float ScaleResponse = 0.12f;
+    private const float MaxMoveScaleBoost = 0.06f;
+    private const double MaxSpeed = 18.0;
+
     public float Angle { get; private set; }
     public float Scale { get; private set; } = 1f;
 
@@ -18,7 +27,16 @@ internal sealed class PetAnimator
         ScheduleNextAnimation(0);
     }
 
-    public void Update(long now)
+    public void Update(long now, double vx, double speed, bool isPaused)
+    {
+        UpdateIdleAnimation(now);
+        UpdateMovementEffects(vx, speed, isPaused);
+
+        Angle += moveAngle;
+        Scale *= moveScale;
+    }
+
+    private void UpdateIdleAnimation(long now)
     {
         if (currentAnimation == IdleAnimation.None)
         {
@@ -50,6 +68,23 @@ internal sealed class PetAnimator
                 UpdateBounce(t, now);
                 break;
         }
+    }
+
+    private void UpdateMovementEffects(double vx, double speed, bool isPaused)
+    {
+        if (isPaused)
+        {
+            moveAngle += -moveAngle * TiltResponse;
+            moveScale += (1f - moveScale) * ScaleResponse;
+            return;
+        }
+
+        float normalizedSpeed = (float)Math.Min(speed / MaxSpeed, 1.0);
+        float targetAngle = (float)(vx / MaxSpeed) * MaxTiltAngle;
+        float targetScale = 1f + normalizedSpeed * MaxMoveScaleBoost;
+
+        moveAngle += (targetAngle - moveAngle) * TiltResponse;
+        moveScale += (targetScale - moveScale) * ScaleResponse;
     }
 
     private void UpdateShake(double t, long now)

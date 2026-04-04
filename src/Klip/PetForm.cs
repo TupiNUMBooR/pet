@@ -22,9 +22,6 @@ public sealed class PetForm : Form
     private double vx;
     private double vy;
 
-    private float moveAngle;
-    private float moveScale = 1f;
-
     private const string AppName = "Klip";
     private const string SpriteResourceName = "Klip.assets.pet.png";
     private const string IconResourceName = "Klip.assets.icon.ico";
@@ -40,11 +37,6 @@ public sealed class PetForm : Form
     private const double MaxSpeed = 18.0;
     private const double StopDistance = 0.5;
     private const double SnapSpeed = 0.1;
-
-    private const float MaxTiltAngle = 10f;
-    private const float TiltResponse = 0.18f;
-    private const float IdleScaleResponse = 0.12f;
-    private const float MaxMoveScaleBoost = 0.06f;
 
     private const int MenuOffsetX = 24;
     private const int MenuOffsetY = 12;
@@ -159,22 +151,26 @@ public sealed class PetForm : Form
 
     private void OnTick(object? sender, EventArgs e)
     {
-        animator.Update(Environment.TickCount64);
+        double speed;
 
         if (isPaused)
         {
-            UpdatePausedMotionEffects();
+            vx = 0.0;
+            vy = 0.0;
+            speed = 0.0;
         }
         else
         {
-            UpdateMovement();
+            speed = UpdateMovement();
         }
+
+        animator.Update(Environment.TickCount64, vx, speed, isPaused);
 
         UpdateMenuPosition();
         UpdateLayered();
     }
 
-    private void UpdateMovement()
+    private double UpdateMovement()
     {
         Point mouse = Cursor.Position;
 
@@ -210,33 +206,13 @@ public sealed class PetForm : Form
             y = targetY;
             vx = 0.0;
             vy = 0.0;
-        }
-        else
-        {
-            x += vx;
-            y += vy;
+            return 0.0;
         }
 
-        UpdateMotionEffects(speed);
-    }
+        x += vx;
+        y += vy;
 
-    private void UpdatePausedMotionEffects()
-    {
-        vx = 0.0;
-        vy = 0.0;
-
-        moveAngle += -moveAngle * TiltResponse;
-        moveScale += (1f - moveScale) * IdleScaleResponse;
-    }
-
-    private void UpdateMotionEffects(double speed)
-    {
-        float normalizedSpeed = (float)Math.Min(speed / MaxSpeed, 1.0);
-        float targetAngle = (float)(vx / MaxSpeed) * MaxTiltAngle;
-        float targetScale = 1f + normalizedSpeed * MaxMoveScaleBoost;
-
-        moveAngle += (targetAngle - moveAngle) * TiltResponse;
-        moveScale += (targetScale - moveScale) * IdleScaleResponse;
+        return speed;
     }
 
     private void OnPetMouseDown(object? sender, MouseEventArgs e)
@@ -279,7 +255,6 @@ public sealed class PetForm : Form
         menuForm.FormClosed += OnMenuClosed;
 
         isPaused = true;
-        UpdatePausedMotionEffects();
         UpdateMenuPosition();
 
         menuForm.Show();
@@ -345,12 +320,9 @@ public sealed class PetForm : Form
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
         g.Clear(Color.Transparent);
 
-        float angle = animator.Angle + moveAngle;
-        float scale = animator.Scale * moveScale;
-
         g.TranslateTransform(Width / 2f, Height / 2f);
-        g.RotateTransform(angle);
-        g.ScaleTransform(scale, scale);
+        g.RotateTransform(animator.Angle);
+        g.ScaleTransform(animator.Scale, animator.Scale);
         g.TranslateTransform(-sprite.Width / 2f, -sprite.Height / 2f);
         g.DrawImage(sprite, 0, 0, sprite.Width, sprite.Height);
 
