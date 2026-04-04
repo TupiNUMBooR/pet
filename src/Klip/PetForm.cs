@@ -114,7 +114,15 @@ public sealed class PetForm : Form
         trayIcon.Text = TrayText;
         trayIcon.Visible = true;
 
+        ToolStripMenuItem versionItem = new($"Klip v{GetAppVersion()}")
+        {
+            Enabled = false
+        };
+
+        trayMenu.Items.Add(versionItem);
+        trayMenu.Items.Add(new ToolStripSeparator());
         trayMenu.Items.Add("Exit", null, (_, _) => Close());
+
         trayIcon.ContextMenuStrip = trayMenu;
     }
 
@@ -400,6 +408,27 @@ public sealed class PetForm : Form
             NativeMethods.DeleteDC(memDc);
             NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
         }
+    }
+
+    private static string GetAppVersion()
+    {
+        Assembly assembly = typeof(PetForm).Assembly;
+
+        string? version =
+            assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion
+            ?? assembly.GetName().Version?.ToString(3);
+
+        if (string.IsNullOrEmpty(version))
+        {
+            return "unknown";
+        }
+
+        int plusIndex = version.IndexOf('+');
+
+        return plusIndex > 0
+            ? version[..plusIndex]
+            : version;
     }
 
     private static Bitmap LoadBitmapResource(string resourceName)
