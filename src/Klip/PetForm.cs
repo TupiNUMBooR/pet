@@ -1,8 +1,6 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 
 namespace Klip;
@@ -27,9 +25,9 @@ public sealed class PetForm : Form
     private float moveAngle;
     private float moveScale = 1f;
 
+    private const string AppName = "Klip";
     private const string SpriteResourceName = "Klip.assets.pet.png";
     private const string IconResourceName = "Klip.assets.icon.ico";
-    private const string TrayText = "Klip";
 
     private const int OffsetX = 120;
     private const int OffsetY = -70;
@@ -41,6 +39,7 @@ public sealed class PetForm : Form
     private const double Damping = 0.90;
     private const double MaxSpeed = 18.0;
     private const double StopDistance = 0.5;
+    private const double SnapSpeed = 0.1;
 
     private const float MaxTiltAngle = 10f;
     private const float TiltResponse = 0.18f;
@@ -62,7 +61,7 @@ public sealed class PetForm : Form
 
     public PetForm()
     {
-        sprite = LoadBitmapResource(SpriteResourceName);
+        sprite = Utils.LoadBitmapResource(SpriteResourceName);
 
         ConfigureWindow();
         InitializePosition();
@@ -110,11 +109,11 @@ public sealed class PetForm : Form
 
     private void InitializeTray()
     {
-        trayIcon.Icon = LoadIconResource(IconResourceName);
-        trayIcon.Text = TrayText;
+        trayIcon.Icon = Utils.LoadIconResource(IconResourceName);
+        trayIcon.Text = AppName;
         trayIcon.Visible = true;
 
-        ToolStripMenuItem versionItem = new($"Klip v{GetAppVersion()}")
+        ToolStripMenuItem versionItem = new($"{AppName} v{Utils.GetAppVersion()}")
         {
             Enabled = false
         };
@@ -205,7 +204,7 @@ public sealed class PetForm : Form
             speed = MaxSpeed;
         }
 
-        if (distance <= StopDistance && speed < 0.1)
+        if (distance <= StopDistance && speed < SnapSpeed)
         {
             x = targetX;
             y = targetY;
@@ -310,14 +309,17 @@ public sealed class PetForm : Form
             return;
         }
 
-        int menuX = (int)Math.Round(x) + Width + MenuOffsetX;
-        int menuY = (int)Math.Round(y) + MenuOffsetY;
+        int petX = (int)Math.Round(x);
+        int petY = (int)Math.Round(y);
 
-        Rectangle area = Screen.FromPoint(new Point((int)Math.Round(x), (int)Math.Round(y))).WorkingArea;
+        int menuX = petX + Width + MenuOffsetX;
+        int menuY = petY + MenuOffsetY;
+
+        Rectangle area = Screen.FromPoint(new Point(petX, petY)).WorkingArea;
 
         if (menuX + menuForm.Width > area.Right)
         {
-            menuX = (int)Math.Round(x) - menuForm.Width - MenuOffsetX;
+            menuX = petX - menuForm.Width - MenuOffsetX;
         }
 
         if (menuY + menuForm.Height > area.Bottom)
@@ -408,55 +410,5 @@ public sealed class PetForm : Form
             NativeMethods.DeleteDC(memDc);
             NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
         }
-    }
-
-    private static string GetAppVersion()
-    {
-        Assembly assembly = typeof(PetForm).Assembly;
-
-        string? version =
-            assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion
-            ?? assembly.GetName().Version?.ToString(3);
-
-        if (string.IsNullOrEmpty(version))
-        {
-            return "unknown";
-        }
-
-        int plusIndex = version.IndexOf('+');
-
-        return plusIndex > 0
-            ? version[..plusIndex]
-            : version;
-    }
-
-    private static Bitmap LoadBitmapResource(string resourceName)
-    {
-        using Stream stream = OpenResourceStream(resourceName);
-        using Image image = Image.FromStream(stream);
-        return new Bitmap(image);
-    }
-
-    private static Icon LoadIconResource(string resourceName)
-    {
-        using Stream stream = OpenResourceStream(resourceName);
-        return new Icon(stream);
-    }
-
-    private static Stream OpenResourceStream(string resourceName)
-    {
-        Assembly assembly = typeof(PetForm).Assembly;
-        Stream? stream = assembly.GetManifestResourceStream(resourceName);
-
-        if (stream is not null)
-        {
-            return stream;
-        }
-
-        throw new InvalidOperationException(
-            "Embedded resource not found: " + resourceName + Environment.NewLine +
-            "Available resources:" + Environment.NewLine +
-            string.Join(Environment.NewLine, assembly.GetManifestResourceNames()));
     }
 }
