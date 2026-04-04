@@ -1,0 +1,44 @@
+name: release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish
+        run: >
+          dotnet publish -c Release
+          -p:Version=${{ github.ref_name }}
+          -p:AssemblyVersion=${{ github.ref_name }}
+          -p:FileVersion=${{ github.ref_name }}
+          -p:InformationalVersion=${{ github.ref_name }}
+          -p:AssemblyName=Pet
+
+      - name: Rename artifact
+        shell: pwsh
+        run: |
+          Copy-Item `
+            "bin/Release/net8.0-windows/win-x64/publish/Pet.exe" `
+            "bin/Release/net8.0-windows/win-x64/publish/Pet-${{ github.ref_name }}-win-x64.exe"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bin/Release/net8.0-windows/win-x64/publish/Pet-${{ github.ref_name }}-win-x64.exe
