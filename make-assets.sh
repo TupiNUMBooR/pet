@@ -17,6 +17,8 @@ magick "$SRC" \
     -resize 128x128 \
     -gravity center \
     -extent 128x128 \
+    -alpha set \
+    -channel A -evaluate multiply 0.75 \
     "$OUT/pet.png"
 
 # pet icon (multi resolution)
