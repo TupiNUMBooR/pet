@@ -16,6 +16,7 @@ public sealed class PetForm : Form
 
     private PetMenuForm? menuForm;
     private bool isPaused;
+    private string menuText = string.Empty;
 
     private double x;
     private double y;
@@ -74,7 +75,7 @@ public sealed class PetForm : Form
         y = Cursor.Position.Y - Height / 2.0 + OffsetY;
 
         trayIcon.Icon = new Icon(iconPath);
-        trayIcon.Text = "Pet";
+        trayIcon.Text = "Clip";
         trayIcon.Visible = true;
 
         trayMenu.Items.Add("Exit", null, (_, _) => Close());
@@ -98,10 +99,17 @@ public sealed class PetForm : Form
         timer.Stop();
         timer.Dispose();
 
-        if (menuForm is not null && !menuForm.IsDisposed)
+        if (menuForm is not null)
         {
-            menuForm.Close();
-            menuForm.Dispose();
+            menuForm.FormClosed -= OnMenuClosed;
+
+            if (!menuForm.IsDisposed)
+            {
+                menuForm.Close();
+                menuForm.Dispose();
+            }
+
+            menuForm = null;
         }
 
         trayIcon.Visible = false;
@@ -212,11 +220,16 @@ public sealed class PetForm : Form
     {
         if (menuForm is not null && !menuForm.IsDisposed)
         {
+            menuText = menuForm.EditorText;
             menuForm.Close();
             return;
         }
 
-        menuForm = new PetMenuForm();
+        menuForm = new PetMenuForm
+        {
+            EditorText = menuText
+        };
+
         menuForm.FormClosed += OnMenuClosed;
 
         isPaused = true;
@@ -229,9 +242,14 @@ public sealed class PetForm : Form
 
     private void OnMenuClosed(object? sender, FormClosedEventArgs e)
     {
-        if (menuForm is not null)
+        if (sender is PetMenuForm closedMenu)
         {
-            menuForm.FormClosed -= OnMenuClosed;
+            menuText = closedMenu.EditorText;
+            closedMenu.FormClosed -= OnMenuClosed;
+        }
+
+        if (ReferenceEquals(menuForm, sender))
+        {
             menuForm = null;
         }
 
