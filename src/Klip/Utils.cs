@@ -2,6 +2,9 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace Klip;
 
@@ -55,4 +58,62 @@ internal static class Utils
             "Available resources:" + Environment.NewLine +
             string.Join(Environment.NewLine, assembly.GetManifestResourceNames()));
     }
+
+    public static void WriteClipboardText(string text)
+    {
+        ExecuteClipboardAction(() =>
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                Clipboard.Clear();
+                return;
+            }
+
+            Clipboard.SetText(text);
+        });
+    }
+
+    public static void WriteClipboardImage(Image? image)
+    {
+        ExecuteClipboardAction(() =>
+        {
+            if (image is null)
+            {
+                Clipboard.Clear();
+                return;
+            }
+
+            Clipboard.SetImage((Image)image.Clone());
+        });
+    }
+
+    public static void ExecuteClipboardAction(Action action)
+    {
+        ExecuteClipboardFunc(() =>
+        {
+            action();
+            return 0;
+        });
+    }
+
+    public static T ExecuteClipboardFunc<T>(Func<T> func)
+    {
+        const int maxAttempts = 5;
+        const int delayMs = 20;
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            try
+            {
+                return func();
+            }
+            catch (ExternalException) when (attempt < maxAttempts - 1)
+            {
+                Thread.Sleep(delayMs);
+            }
+        }
+
+        return func();
+    }
 }
+

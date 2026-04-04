@@ -15,7 +15,6 @@ public sealed class PetForm : Form
 
     private PetMenuForm? menuForm;
     private bool isPaused;
-    private string menuText = string.Empty;
 
     private double x;
     private double y;
@@ -241,30 +240,25 @@ public sealed class PetForm : Form
     {
         if (menuForm is not null && !menuForm.IsDisposed)
         {
-            menuText = menuForm.EditorText;
             menuForm.Close();
             return;
         }
 
-        menuForm = new PetMenuForm
-        {
-            EditorText = menuText
-        };
-
+        menuForm = new PetMenuForm();
         menuForm.FormClosed += OnMenuClosed;
 
         isPaused = true;
-        UpdateMenuPosition();
 
         menuForm.Show();
+        UpdateMenuPosition();
         menuForm.BringToFront();
+        menuForm.Activate();
     }
 
     private void OnMenuClosed(object? sender, FormClosedEventArgs e)
     {
         if (sender is PetMenuForm closedMenu)
         {
-            menuText = closedMenu.EditorText;
             closedMenu.FormClosed -= OnMenuClosed;
         }
 
