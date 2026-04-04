@@ -1,6 +1,6 @@
 using System;
 
-namespace Pet;
+namespace Klip;
 
 internal sealed class PetAnimator
 {

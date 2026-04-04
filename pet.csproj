@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>Pet</AssemblyName>
-    <RootNamespace>Pet</RootNamespace>
+    <AssemblyName>Klip</AssemblyName>
+    <RootNamespace>Klip</RootNamespace>
     <Version>0.0.0</Version>
 
     <OutputType>WinExe</OutputType>

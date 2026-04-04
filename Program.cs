@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 
-namespace Pet;
+namespace Klip;
 
 internal static class Program
 {
@@ -20,7 +20,7 @@ internal static class Program
             File.WriteAllText(path, ex.ToString());
             MessageBox.Show(
                 ex.ToString(),
-                "Clip crashed",
+                "Klip crashed",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error
             );

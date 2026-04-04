@@ -5,7 +5,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace Pet;
+namespace Klip;
 
 public sealed class PetForm : Form
 {
@@ -27,9 +27,9 @@ public sealed class PetForm : Form
     private float moveAngle;
     private float moveScale = 1f;
 
-    private const string SpriteResourceName = "Pet.assets.pet.png";
-    private const string IconResourceName = "Pet.assets.icon.ico";
-    private const string TrayText = "Clip";
+    private const string SpriteResourceName = "Klip.assets.pet.png";
+    private const string IconResourceName = "Klip.assets.icon.ico";
+    private const string TrayText = "Klip";
 
     private const int OffsetX = 120;
     private const int OffsetY = -70;

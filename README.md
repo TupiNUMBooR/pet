@@ -1,13 +1,14 @@
 ![](assets/pet.png)
 
-# Pet
+# Klip
 
-Minimal desktop pet for Windows (C# / WinForms).
+Klip is a desktop pet for Windows
 
 - Follows cursor
 - Remembers clipboard text
 - Lives in tray
 - Wobbles
+- Written in C# + WinForms
 
 ![](memory-screenshot.png)
 

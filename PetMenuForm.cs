@@ -2,11 +2,11 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace Pet;
+namespace Klip;
 
 public sealed class PetMenuForm : Form
 {
-    private const string WindowTitle = "Clip's Memory";
+    private const string WindowTitle = "Klip's Memory";
 
     private const int WindowWidth = 280;
     private const int WindowHeight = 180;

@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Pet;
+namespace Klip;
 
 internal static class NativeMethods
 {
