@@ -3,7 +3,7 @@ name: release
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+      - '*.*.*'
 
 permissions:
   contents: write
@@ -23,22 +23,21 @@ jobs:
 
       - name: Publish
         run: >
-          dotnet publish -c Release
+          dotnet publish Klip.sln -c Release -o artifacts
           -p:Version=${{ github.ref_name }}
           -p:AssemblyVersion=${{ github.ref_name }}
           -p:FileVersion=${{ github.ref_name }}
           -p:InformationalVersion=${{ github.ref_name }}
-          -p:AssemblyName=Pet
 
       - name: Rename artifact
         shell: pwsh
         run: |
-          Copy-Item `
-            "bin/Release/net8.0-windows/win-x64/publish/Pet.exe" `
-            "bin/Release/net8.0-windows/win-x64/publish/Pet-${{ github.ref_name }}-win-x64.exe"
+          Move-Item `
+            "artifacts/Klip.exe" `
+            "artifacts/Klip-${{ github.ref_name }}.exe"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/Release/net8.0-windows/win-x64/publish/Pet-${{ github.ref_name }}-win-x64.exe
+            artifacts/Klip-${{ github.ref_name }}.exe

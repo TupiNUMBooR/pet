@@ -6,8 +6,9 @@ if [[ $# -lt 1 ]]; then
     exit 1
 fi
 
-SRC="$1"
-OUT="assets"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SRC="$ROOT_DIR/assets-src/ghost-cat-crop.png"
+OUT="$ROOT_DIR/assets"
 
 mkdir -p "$OUT"
 

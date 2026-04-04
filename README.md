@@ -28,14 +28,14 @@ Klip is a desktop pet for Windows
 
 ## Run
 
-`dotnet run`
+`dotnet run --project src/Klip`
 
 ## Build
 
 `dotnet publish -c Release`
 
 Output:
-`bin/Release/net8.0-windows/win-x64/publish/`
+`src/Klip/bin/Release/net8.0-windows/win-x64/publish/`
 
 ## License
 

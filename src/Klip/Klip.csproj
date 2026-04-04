@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>Klip</AssemblyName>
-    <RootNamespace>Klip</RootNamespace>
     <Version>0.0.0</Version>
 
     <OutputType>WinExe</OutputType>
