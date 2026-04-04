@@ -151,7 +151,7 @@ public sealed class PetMenuForm : Form
             if (!Clipboard.ContainsText())
                 return;
 
-            editor.SelectedText = Clipboard.GetText();
+            editor.Text = Clipboard.GetText();
             editor.Focus();
         }
         catch
