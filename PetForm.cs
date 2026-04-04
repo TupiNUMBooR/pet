@@ -16,13 +16,27 @@ public sealed class PetForm : Form
 
     private double x;
     private double y;
+    private double vx;
+    private double vy;
+
+    private float moveAngle;
+    private float moveScale = 1f;
 
     private const int OffsetX = 48;
-    private const int OffsetY = 96;
-    private const double FollowSpeed = 0.05;
+    private const int OffsetY = -96;
     private const byte WindowOpacity = 220;
     private const int TickMs = 8;
     private const float MaxScale = 1.4f;
+
+    private const double Acceleration = 0.035;
+    private const double Damping = 0.90;
+    private const double MaxSpeed = 18.0;
+    private const double StopDistance = 0.5;
+
+    private const float MaxTiltAngle = 10f;
+    private const float TiltResponse = 0.18f;
+    private const float IdleScaleResponse = 0.12f;
+    private const float MaxMoveScaleBoost = 0.06f;
 
     protected override CreateParams CreateParams
     {
@@ -50,8 +64,8 @@ public sealed class PetForm : Form
         Width = (int)Math.Ceiling(sprite.Width * MaxScale);
         Height = (int)Math.Ceiling(sprite.Height * MaxScale);
 
-        x = Cursor.Position.X + OffsetX - Width / 2.0;
-        y = Cursor.Position.Y - OffsetY - Height / 2.0;
+        x = Cursor.Position.X - Width / 2.0 + OffsetX;
+        y = Cursor.Position.Y - Height / 2.0 + OffsetY;
 
         trayIcon.Icon = new Icon(iconPath);
         trayIcon.Text = "Pet";
@@ -90,25 +104,75 @@ public sealed class PetForm : Form
     private void OnTick(object? sender, EventArgs e)
     {
         Point mouse = Cursor.Position;
-        double targetX = mouse.X + OffsetX - Width / 2.0;
-        double targetY = mouse.Y - OffsetY - Height / 2.0;
 
-        x += (targetX - x) * FollowSpeed;
-        y += (targetY - y) * FollowSpeed;
+        double targetX = mouse.X - Width / 2.0 + OffsetX;
+        double targetY = mouse.Y - Height / 2.0 + OffsetY;
+
+        double dx = targetX - x;
+        double dy = targetY - y;
+        double distance = Math.Sqrt(dx * dx + dy * dy);
+
+        if (distance > StopDistance)
+        {
+            vx += dx * Acceleration;
+            vy += dy * Acceleration;
+        }
+
+        vx *= Damping;
+        vy *= Damping;
+
+        double speed = Math.Sqrt(vx * vx + vy * vy);
+
+        if (speed > MaxSpeed)
+        {
+            double k = MaxSpeed / speed;
+            vx *= k;
+            vy *= k;
+            speed = MaxSpeed;
+        }
+
+        if (distance <= StopDistance && speed < 0.1)
+        {
+            x = targetX;
+            y = targetY;
+            vx = 0.0;
+            vy = 0.0;
+        }
+        else
+        {
+            x += vx;
+            y += vy;
+        }
 
         animator.Update(Environment.TickCount64);
+        UpdateMotionEffects(speed);
         UpdateLayered();
     }
 
     private void OnPetMouseDown(object? sender, MouseEventArgs e)
     {
-        if (e.Button != MouseButtons.Left)
+        switch (e.Button)
         {
-            return;
-        }
+            case MouseButtons.Left:
+                vx += 8.0;
+                UpdateLayered();
+                break;
 
-        x += 100;
-        UpdateLayered();
+            case MouseButtons.Middle:
+                Close();
+                break;
+        }
+    }
+
+    private void UpdateMotionEffects(double speed)
+    {
+        float normalizedSpeed = (float)Math.Min(speed / MaxSpeed, 1.0);
+
+        float targetAngle = (float)(vx / MaxSpeed) * MaxTiltAngle;
+        float targetScale = 1f + normalizedSpeed * MaxMoveScaleBoost;
+
+        moveAngle += (targetAngle - moveAngle) * TiltResponse;
+        moveScale += (targetScale - moveScale) * IdleScaleResponse;
     }
 
     private Bitmap RenderFrame()
@@ -121,9 +185,12 @@ public sealed class PetForm : Form
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
         g.Clear(Color.Transparent);
 
+        float angle = animator.Angle + moveAngle;
+        float scale = animator.Scale * moveScale;
+
         g.TranslateTransform(Width / 2f, Height / 2f);
-        g.RotateTransform(animator.Angle);
-        g.ScaleTransform(animator.Scale, animator.Scale);
+        g.RotateTransform(angle);
+        g.ScaleTransform(scale, scale);
         g.TranslateTransform(-sprite.Width / 2f, -sprite.Height / 2f);
         g.DrawImage(sprite, 0, 0, sprite.Width, sprite.Height);
 
