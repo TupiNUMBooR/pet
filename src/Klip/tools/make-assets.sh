@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-    echo "usage: $0 source-image"
-    exit 1
-fi
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$ROOT_DIR/assets-src/ghost-cat-crop.png"
+SRC_DIR="$ROOT_DIR/assets-src"
+SRC="$SRC_DIR/ghost-cat-crop.png"
 OUT="$ROOT_DIR/assets"
 
 mkdir -p "$OUT"
@@ -37,6 +33,14 @@ magick "$SRC" \
     -delete 0 \
     "$OUT/icon.ico"
 
+magick "$SRC" \
+    -resize 630x500 \
+    -gravity center \
+    -background none \
+    -extent 630x500 \
+    "$SRC_DIR/itch-picture.png"
+
 echo "Assets generated:"
 echo "  $OUT/pet.png"
 echo "  $OUT/icon.ico"
+echo "  $SRC_DIR/itch-picture.png"

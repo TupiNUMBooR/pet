@@ -2,14 +2,15 @@
 
 ![](src/Klip/assets/pet.png)
 
-Klip is a desktop pet for Windows.
+Klip is a small desktop pet for Windows that follows your cursor and remembers your clipboard.
+
+## Features
 
 - Follows the cursor
 - Shows clipboard text or images
 - Lets you edit clipboard text (plain text only)
 - Lives in the system tray
 - Wobbles
-- Written in C# and WinForms
 
 ![](docs/memory-screenshot-2.png)
 
@@ -17,9 +18,7 @@ Klip is a desktop pet for Windows.
 
 ### Download
 
-Download the latest portable version from GitHub Releases:
-
-https://github.com/tupinumboor/pet/releases
+Prebuilt portable version available on [itch.io](https://tupinumboor.itch.io/klip)
 
 ### Controls
 
@@ -30,6 +29,8 @@ https://github.com/tupinumboor/pet/releases
 | MMB | Exits the app |
 
 ## Development
+
+Klip is written in C# and WinForms
 
 Requirements for building or modifying Klip:
 
