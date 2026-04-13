@@ -167,18 +167,16 @@ public sealed class PetForm : Form
 
     private void CloseHelper()
     {
-        if (helperForm is null)
+        var form = helperForm;
+        if (form is null)
         {
             return;
         }
 
-        if (!helperForm.IsDisposed)
-        {
-            helperForm.Close();
-            helperForm.Dispose();
-        }
-
         helperForm = null;
+
+        form.Close();
+        form.Dispose();
     }
 
     private void OnTick(object? sender, EventArgs e)
