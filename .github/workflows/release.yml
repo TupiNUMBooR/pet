@@ -50,5 +50,6 @@ jobs:
           butler push
           artifacts/Klip-${{ github.ref_name }}.exe
           tupinumboor/klip:windows
+          --userversion ${{ github.ref_name }}
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
