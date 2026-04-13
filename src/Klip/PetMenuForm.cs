@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace Klip;
 
-public sealed class PetMenuForm : Form
+public sealed partial class PetMenuForm : Form
 {
     private const int DefaultWindowWidth = 340;
     private const int DefaultWindowHeight = 240;
@@ -18,14 +18,6 @@ public sealed class PetMenuForm : Form
     private const int ToolbarHeight = 30;
     private const int ContentTop = OuterPadding + ToolbarHeight + 8;
 
-    private readonly Panel rootPanel = new();
-    private readonly Label typeBadge = new();
-    private readonly Button clearButton = new();
-    private readonly Button cancelButton = new();
-    private readonly Button saveButton = new();
-    private readonly TextBox textEditor = new();
-    private readonly PictureBox imageBox = new();
-
     private bool allowClose;
     private bool isDirty;
     private bool isApplyingContent;
@@ -37,23 +29,11 @@ public sealed class PetMenuForm : Form
 
     public PetMenuForm()
     {
-        ConfigureWindow();
-        InitializeRoot();
-        InitializeToolbar();
-        InitializeTextEditor();
-        InitializeImageBox();
-
-        Controls.Add(rootPanel);
+        InitializeComponent();
 
         LoadClipboardSnapshot();
         ApplyCurrentContent();
         UpdateDirtyState(false);
-    }
-
-    protected override void OnFormClosed(FormClosedEventArgs e)
-    {
-        DisposeCurrentImage();
-        base.OnFormClosed(e);
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -61,110 +41,20 @@ public sealed class PetMenuForm : Form
         if (!allowClose && isDirty)
         {
             e.Cancel = true;
-            FlashSaveButton();
+            saveButton.Focus();
             return;
         }
 
         base.OnFormClosing(e);
     }
 
-    private void ConfigureWindow()
+    protected override void OnFormClosed(FormClosedEventArgs e)
     {
-        StartPosition = FormStartPosition.Manual;
-        FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        TopMost = true;
-        KeyPreview = true;
-        BackColor = Color.FromArgb(10, 12, 16);
-        ClientSize = new Size(DefaultWindowWidth, DefaultWindowHeight);
+        imageBox.Image = null;
+        currentImage?.Dispose();
+        currentImage = null;
 
-        KeyDown += OnFormKeyDown;
-    }
-
-    private void InitializeRoot()
-    {
-        rootPanel.Dock = DockStyle.Fill;
-        rootPanel.BackColor = Color.FromArgb(18, 21, 27);
-        rootPanel.Padding = new Padding(OuterPadding);
-    }
-
-    private void InitializeToolbar()
-    {
-        ConfigureToolbarButton(clearButton, "Clear", new Point(OuterPadding, OuterPadding));
-        ConfigureToolbarButton(cancelButton, "Cancel", new Point(OuterPadding + 72, OuterPadding));
-
-        saveButton.Size = new Size(64, 28);
-        saveButton.Location = new Point(OuterPadding + 144, OuterPadding);
-        saveButton.FlatStyle = FlatStyle.Flat;
-        saveButton.FlatAppearance.BorderSize = 1;
-        saveButton.FlatAppearance.BorderColor = Color.FromArgb(72, 78, 90);
-        saveButton.BackColor = Color.FromArgb(52, 58, 70);
-        saveButton.ForeColor = Color.FromArgb(235, 239, 245);
-        saveButton.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-        saveButton.TabStop = false;
-        saveButton.Text = "Save";
-        saveButton.Click += (_, _) => SaveAndClose();
-
-        clearButton.Click += (_, _) => ClearContent();
-        cancelButton.Click += (_, _) => CancelAndClose();
-
-        typeBadge.AutoSize = false;
-        typeBadge.Size = new Size(76, 24);
-        typeBadge.TextAlign = ContentAlignment.MiddleCenter;
-        typeBadge.Location = new Point(ClientSize.Width - OuterPadding - 76, OuterPadding + 2);
-        typeBadge.BackColor = Color.FromArgb(44, 49, 58);
-        typeBadge.ForeColor = Color.FromArgb(235, 239, 245);
-        typeBadge.Font = new Font("Segoe UI", 8.5f, FontStyle.Bold);
-
-        rootPanel.Controls.Add(clearButton);
-        rootPanel.Controls.Add(cancelButton);
-        rootPanel.Controls.Add(saveButton);
-        rootPanel.Controls.Add(typeBadge);
-    }
-
-    private void ConfigureToolbarButton(Button button, string text, Point location)
-    {
-        button.Size = new Size(64, 28);
-        button.Location = location;
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = Color.FromArgb(72, 78, 90);
-        button.BackColor = Color.FromArgb(34, 38, 46);
-        button.ForeColor = Color.FromArgb(228, 232, 238);
-        button.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-        button.TabStop = false;
-        button.Text = text;
-    }
-
-    private void InitializeTextEditor()
-    {
-        textEditor.Location = new Point(OuterPadding, ContentTop);
-        textEditor.Size = GetContentAreaSize();
-        textEditor.Multiline = true;
-        textEditor.AcceptsReturn = true;
-        textEditor.AcceptsTab = false;
-        textEditor.WordWrap = true;
-        textEditor.ScrollBars = ScrollBars.Vertical;
-        textEditor.BorderStyle = BorderStyle.None;
-        textEditor.BackColor = Color.FromArgb(24, 27, 34);
-        textEditor.ForeColor = Color.FromArgb(226, 230, 236);
-        textEditor.Font = new Font("Consolas", 10f);
-        textEditor.TextChanged += OnTextEditorChanged;
-
-        rootPanel.Controls.Add(textEditor);
-    }
-
-    private void InitializeImageBox()
-    {
-        imageBox.Location = new Point(OuterPadding, ContentTop);
-        imageBox.Size = GetContentAreaSize();
-        imageBox.SizeMode = PictureBoxSizeMode.Zoom;
-        imageBox.BackColor = Color.FromArgb(24, 27, 34);
-        imageBox.Visible = false;
-        imageBox.Cursor = Cursors.Hand;
-        imageBox.Click += OnImageClicked;
-
-        rootPanel.Controls.Add(imageBox);
+        base.OnFormClosed(e);
     }
 
     private void OnFormKeyDown(object? sender, KeyEventArgs e)
@@ -173,7 +63,7 @@ public sealed class PetMenuForm : Form
         {
             if (isDirty)
             {
-                FlashSaveButton();
+                saveButton.Focus();
             }
             else
             {
@@ -191,6 +81,34 @@ public sealed class PetMenuForm : Form
         }
     }
 
+    private void OnTextEditorChanged(object? sender, EventArgs e)
+    {
+        if (currentKind != ClipboardViewKind.Text || isApplyingContent)
+        {
+            return;
+        }
+
+        currentText = textEditor.Text;
+
+        if (currentTypeTag != "TXT")
+        {
+            SetTypeTag("TXT");
+        }
+
+        UpdateDirtyState(true);
+    }
+
+    private void OnImageClicked(object? sender, EventArgs e)
+    {
+        if (currentImage is null)
+        {
+            return;
+        }
+
+        using FullscreenImageForm preview = new(currentImage);
+        preview.ShowDialog(this);
+    }
+
     private void LoadClipboardSnapshot()
     {
         Utils.ExecuteClipboardAction(() =>
@@ -199,42 +117,43 @@ public sealed class PetMenuForm : Form
             string[] formats = data?.GetFormats() ?? Array.Empty<string>();
 
             currentKind = ClipboardViewKind.Text;
-            currentTypeTag = "TXT";
             currentText = string.Empty;
 
-            DisposeCurrentImage();
+            imageBox.Image = null;
+            currentImage?.Dispose();
+            currentImage = null;
 
             if (data is null)
             {
+                SetTypeTag("TXT");
                 return;
             }
 
             if (data.GetDataPresent(DataFormats.FileDrop))
             {
                 string[] files = data.GetData(DataFormats.FileDrop) as string[] ?? Array.Empty<string>();
-
-                currentTypeTag = "FILE";
                 currentText = files.Length > 0
                     ? string.Join(Environment.NewLine, files)
                     : "Clipboard contains files.";
+                SetTypeTag("FILE");
                 return;
             }
 
             if (data.GetDataPresent(DataFormats.Html))
             {
-                currentTypeTag = "HTML";
                 currentText = Clipboard.ContainsText()
                     ? Clipboard.GetText()
                     : "Clipboard contains HTML content.";
+                SetTypeTag("HTML");
                 return;
             }
 
             if (data.GetDataPresent(DataFormats.Rtf))
             {
-                currentTypeTag = "RTF";
                 currentText = Clipboard.ContainsText()
                     ? Clipboard.GetText()
                     : "Clipboard contains rich text.";
+                SetTypeTag("RTF");
                 return;
             }
 
@@ -245,16 +164,16 @@ public sealed class PetMenuForm : Form
                 if (image is not null)
                 {
                     currentKind = ClipboardViewKind.Image;
-                    currentTypeTag = "IMG";
                     currentImage = (Image)image.Clone();
+                    SetTypeTag("IMG");
                     return;
                 }
             }
 
             if (Clipboard.ContainsText())
             {
-                currentTypeTag = "TXT";
                 currentText = Clipboard.GetText();
+                SetTypeTag("TXT");
                 return;
             }
 
@@ -262,32 +181,29 @@ public sealed class PetMenuForm : Form
 
             if (!string.IsNullOrEmpty(fallbackFormat))
             {
-                currentTypeTag = FormatTag(fallbackFormat);
                 currentText = $"Clipboard contains data in format: {fallbackFormat}";
+                SetTypeTag(FormatTag(fallbackFormat));
                 return;
             }
 
-            currentTypeTag = "EMPTY";
             currentText = string.Empty;
+            SetTypeTag("EMPTY");
         });
     }
 
     private void ApplyCurrentContent()
     {
-        switch (currentKind)
+        if (currentKind == ClipboardViewKind.Image)
         {
-            case ClipboardViewKind.Image:
-                ApplyImageContent();
-                break;
+            textEditor.Visible = false;
+            imageBox.Visible = true;
+            imageBox.Image = currentImage;
 
-            default:
-                ApplyTextContent();
-                break;
+            ResizeForImage(currentImage);
+            UpdateLayoutForCurrentSize();
+            return;
         }
-    }
 
-    private void ApplyTextContent()
-    {
         textEditor.Visible = true;
         textEditor.ReadOnly = false;
         imageBox.Visible = false;
@@ -307,52 +223,19 @@ public sealed class PetMenuForm : Form
             isApplyingContent = false;
         }
 
-        typeBadge.Text = currentTypeTag;
-        UpdateBadgeColor(currentTypeTag);
-
         ClientSize = new Size(DefaultWindowWidth, DefaultWindowHeight);
         UpdateLayoutForCurrentSize();
     }
 
-    private void ApplyImageContent()
-    {
-        textEditor.Visible = false;
-        imageBox.Visible = true;
-        imageBox.Image = currentImage;
-
-        typeBadge.Text = currentTypeTag;
-        UpdateBadgeColor(currentTypeTag);
-
-        ResizeForImage(currentImage);
-        UpdateLayoutForCurrentSize();
-    }
-
-    private void OnTextEditorChanged(object? sender, EventArgs e)
-    {
-        if (currentKind != ClipboardViewKind.Text || isApplyingContent)
-        {
-            return;
-        }
-
-        currentText = textEditor.Text;
-
-        if (currentTypeTag != "TXT")
-        {
-            currentTypeTag = "TXT";
-            typeBadge.Text = currentTypeTag;
-            UpdateBadgeColor(currentTypeTag);
-        }
-
-        UpdateDirtyState(true);
-    }
-
     private void ClearContent()
     {
-        DisposeCurrentImage();
+        imageBox.Image = null;
+        currentImage?.Dispose();
+        currentImage = null;
 
         currentKind = ClipboardViewKind.Text;
-        currentTypeTag = "EMPTY";
         currentText = string.Empty;
+        SetTypeTag("EMPTY");
 
         ApplyCurrentContent();
         textEditor.Focus();
@@ -363,13 +246,21 @@ public sealed class PetMenuForm : Form
     {
         try
         {
-            WriteCurrentContentToClipboard();
+            if (currentKind == ClipboardViewKind.Image)
+            {
+                Utils.WriteClipboardImage(currentImage);
+            }
+            else
+            {
+                Utils.WriteClipboardText(currentText);
+            }
+
             allowClose = true;
             Close();
         }
         catch
         {
-            FlashSaveButton();
+            saveButton.Focus();
         }
     }
 
@@ -377,20 +268,6 @@ public sealed class PetMenuForm : Form
     {
         allowClose = true;
         Close();
-    }
-
-    private void WriteCurrentContentToClipboard()
-    {
-        switch (currentKind)
-        {
-            case ClipboardViewKind.Image:
-                Utils.WriteClipboardImage(currentImage);
-                break;
-
-            default:
-                Utils.WriteClipboardText(currentText);
-                break;
-        }
     }
 
     private void UpdateDirtyState(bool dirty)
@@ -407,9 +284,38 @@ public sealed class PetMenuForm : Form
             : Color.FromArgb(180, 186, 196);
     }
 
-    private void FlashSaveButton()
+    private void SetTypeTag(string tag)
     {
-        saveButton.Focus();
+        currentTypeTag = tag;
+        typeBadge.Text = tag;
+
+        switch (tag)
+        {
+            case "HTML":
+                typeBadge.BackColor = Color.FromArgb(91, 62, 34);
+                break;
+
+            case "RTF":
+                typeBadge.BackColor = Color.FromArgb(70, 52, 92);
+                break;
+
+            case "FILE":
+                typeBadge.BackColor = Color.FromArgb(52, 84, 64);
+                break;
+
+            case "PNG":
+            case "IMG":
+                typeBadge.BackColor = Color.FromArgb(38, 67, 92);
+                break;
+
+            case "EMPTY":
+                typeBadge.BackColor = Color.FromArgb(62, 62, 62);
+                break;
+
+            default:
+                typeBadge.BackColor = Color.FromArgb(44, 49, 58);
+                break;
+        }
     }
 
     private void ResizeForImage(Image? image)
@@ -444,127 +350,33 @@ public sealed class PetMenuForm : Form
         saveButton.Location = new Point(OuterPadding + 144, OuterPadding);
         typeBadge.Location = new Point(ClientSize.Width - OuterPadding - typeBadge.Width, OuterPadding + 2);
 
-        Size contentArea = GetContentAreaSize();
-
-        textEditor.Location = new Point(OuterPadding, ContentTop);
-        textEditor.Size = contentArea;
-
-        imageBox.Location = new Point(OuterPadding, ContentTop);
-        imageBox.Size = contentArea;
-    }
-
-    private Size GetContentAreaSize()
-    {
-        return new Size(
+        Size contentArea = new(
             Math.Max(1, ClientSize.Width - OuterPadding * 2),
             Math.Max(1, ClientSize.Height - ContentTop - OuterPadding));
-    }
 
-    private void OnImageClicked(object? sender, EventArgs e)
-    {
-        if (currentImage is null)
-        {
-            return;
-        }
+        Point contentLocation = new(OuterPadding, ContentTop);
 
-        using FullscreenImageForm preview = new(currentImage);
-        preview.ShowDialog(this);
-    }
+        textEditor.Location = contentLocation;
+        textEditor.Size = contentArea;
 
-    private void DisposeCurrentImage()
-    {
-        imageBox.Image = null;
-
-        if (currentImage is null)
-        {
-            return;
-        }
-
-        currentImage.Dispose();
-        currentImage = null;
-    }
-
-    private void UpdateBadgeColor(string tag)
-    {
-        switch (tag)
-        {
-            case "HTML":
-                typeBadge.BackColor = Color.FromArgb(91, 62, 34);
-                break;
-
-            case "RTF":
-                typeBadge.BackColor = Color.FromArgb(70, 52, 92);
-                break;
-
-            case "FILE":
-                typeBadge.BackColor = Color.FromArgb(52, 84, 64);
-                break;
-
-            case "PNG":
-            case "IMG":
-                typeBadge.BackColor = Color.FromArgb(38, 67, 92);
-                break;
-
-            case "EMPTY":
-                typeBadge.BackColor = Color.FromArgb(62, 62, 62);
-                break;
-
-            default:
-                typeBadge.BackColor = Color.FromArgb(44, 49, 58);
-                break;
-        }
+        imageBox.Location = contentLocation;
+        imageBox.Size = contentArea;
     }
 
     private static string GetPreferredUnknownFormat(string[] formats)
     {
         foreach (string format in formats)
         {
-            if (string.IsNullOrWhiteSpace(format))
-            {
-                continue;
-            }
-
-            if (format == DataFormats.Text)
-            {
-                continue;
-            }
-
-            if (format == DataFormats.UnicodeText)
-            {
-                continue;
-            }
-
-            if (format == DataFormats.StringFormat)
-            {
-                continue;
-            }
-
-            if (format == DataFormats.Bitmap)
-            {
-                continue;
-            }
-
-            if (format == DataFormats.Html)
-            {
-                continue;
-            }
-
-            if (format == DataFormats.Rtf)
-            {
-                continue;
-            }
-
-            if (format == DataFormats.FileDrop)
-            {
-                continue;
-            }
-
-            if (format == "System.String")
-            {
-                continue;
-            }
-
-            if (format == "PNG")
+            if (string.IsNullOrWhiteSpace(format)
+                || format == DataFormats.Text
+                || format == DataFormats.UnicodeText
+                || format == DataFormats.StringFormat
+                || format == DataFormats.Bitmap
+                || format == DataFormats.Html
+                || format == DataFormats.Rtf
+                || format == DataFormats.FileDrop
+                || format == "System.String"
+                || format == "PNG")
             {
                 continue;
             }
@@ -590,10 +402,10 @@ public sealed class PetMenuForm : Form
             tag = tag[(lastDot + 1)..];
         }
 
-        tag = tag.Replace("FORMAT", string.Empty);
-        tag = tag.Replace("_", string.Empty);
-        tag = tag.Replace("-", string.Empty);
-        tag = tag.Replace(" ", string.Empty);
+        tag = tag.Replace("FORMAT", string.Empty)
+            .Replace("_", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace(" ", string.Empty);
 
         if (tag.Length == 0)
         {
