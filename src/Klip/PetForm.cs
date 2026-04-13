@@ -25,8 +25,8 @@ public sealed class PetForm : Form
     private const string SpriteResourceName = "Klip.assets.pet.png";
     private const string IconResourceName = "Klip.assets.icon.ico";
 
-    private const int OffsetX = 120;
-    private const int OffsetY = -70;
+    private const int OffsetX = 170;
+    private const int OffsetY = -90;
     private const byte WindowOpacity = 220;
     private const int TickMs = 8;
     private const float MaxScale = 1.4f;
@@ -34,6 +34,8 @@ public sealed class PetForm : Form
     private const double Acceleration = 0.005;
     private const double Damping = 0.90;
     private const double MaxSpeed = 18.0;
+    private const double KickSpeedX = 16.0;
+    private const double KickSpeedY = 12.0;
     private const double StopDistance = 0.5;
     private const double SnapSpeed = 0.1;
 
@@ -220,8 +222,8 @@ public sealed class PetForm : Form
             case MouseButtons.Left:
                 if (!isPaused)
                 {
-                    vx += 8.0;
-                    vy -= 6.0;
+                    vx += KickSpeedX;
+                    vy -= KickSpeedY;
                     UpdateLayered();
                 }
                 break;
