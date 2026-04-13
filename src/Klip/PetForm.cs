@@ -1,9 +1,6 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.IO;
-using System.Media;
-using System.Reflection;
 using System.Windows.Forms;
 
 namespace Klip;
@@ -15,11 +12,7 @@ public sealed class PetForm : Form
     private readonly NotifyIcon trayIcon = new();
     private readonly ContextMenuStrip trayMenu = new();
     private readonly PetAnimator animator = new();
-
-    private readonly MemoryStream[] calmMeowStreams;
-    private readonly MemoryStream[] panicMeowStreams;
-    private readonly SoundPlayer[] calmMeowPlayers;
-    private readonly SoundPlayer[] panicMeowPlayers;
+    private readonly PetAudioPlayer audioPlayer = new();
 
     private PetMenuForm? menuForm;
     private bool isPaused;
@@ -34,18 +27,8 @@ public sealed class PetForm : Form
     private const string SpriteResourceName = "Klip.assets.pet.png";
     private const string IconResourceName = "Klip.assets.icon.ico";
 
-    private static readonly string[] CalmMeowResourceName =
-    [
-        "Klip.assets.ethereal_meow_1.wav",
-        "Klip.assets.ethereal_meow_4.wav",
-        "Klip.assets.ethereal_meow_6.wav"
-    ];
-
-    private static readonly string[] PanicMeowResourceName =
-    [
-        "Klip.assets.ethereal_meow_5.wav",
-        "Klip.assets.ethereal_meow_7.wav"
-    ];
+    private const int CalmMeowChancePercent = 25;
+    private const int PanicMeowChancePercent = 5;
 
     private const int OffsetX = 170;
     private const int OffsetY = -90;
@@ -82,11 +65,6 @@ public sealed class PetForm : Form
     {
         sprite = Utils.LoadBitmapResource(SpriteResourceName);
 
-        calmMeowStreams = LoadSoundResources(CalmMeowResourceName);
-        panicMeowStreams = LoadSoundResources(PanicMeowResourceName);
-        calmMeowPlayers = CreatePlayers(calmMeowStreams);
-        panicMeowPlayers = CreatePlayers(panicMeowStreams);
-
         ConfigureWindow();
         InitializePosition();
         InitializeTray();
@@ -109,11 +87,7 @@ public sealed class PetForm : Form
         CloseMenu();
         DisposeTray();
 
-        DisposePlayers(calmMeowPlayers);
-        DisposePlayers(panicMeowPlayers);
-        DisposeStreams(calmMeowStreams);
-        DisposeStreams(panicMeowStreams);
-
+        audioPlayer.Dispose();
         sprite.Dispose();
 
         base.OnFormClosed(e);
@@ -306,15 +280,33 @@ public sealed class PetForm : Form
             case MouseButtons.Left:
                 if (!isPaused)
                 {
-                    vx += KickSpeedX;
-                    vy -= KickSpeedY;
-                    PlayRandomSound(calmMeowPlayers, calmMeowStreams);
+                    int roll = Random.Shared.Next(100);
+
+                    if (roll < PanicMeowChancePercent)
+                    {
+                        vx += KickSpeedX * 0.5;
+                        vy -= KickSpeedY * 2;
+                        audioPlayer.PlayPanic();
+                    }
+                    else if (roll < PanicMeowChancePercent + CalmMeowChancePercent)
+                    {
+                        vx += KickSpeedX;
+                        vy -= KickSpeedY;
+                        audioPlayer.PlayMeow();
+                    }
+                    else
+                    {
+                        vx += KickSpeedX * 0.7;
+                        vy -= KickSpeedY * 0.1;
+                        audioPlayer.PlayPurr();
+                    }
+
                     UpdateLayered();
                 }
                 break;
 
             case MouseButtons.Right:
-                PlayRandomSound(calmMeowPlayers, calmMeowStreams);
+                audioPlayer.PlayMeow();
                 ToggleMenu();
                 break;
 
@@ -356,7 +348,7 @@ public sealed class PetForm : Form
         vx = centerX < bounds.Left + bounds.Width / 2.0 ? -ExitSpeedX : ExitSpeedX;
         vy = -ExitSpeedY;
 
-        PlayRandomSound(panicMeowPlayers, panicMeowStreams);
+        audioPlayer.PlayPanic();
     }
 
     private void OnMenuClosed(object? sender, FormClosedEventArgs e)
@@ -478,70 +470,6 @@ public sealed class PetForm : Form
 
             NativeMethods.DeleteDC(memDc);
             NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
-        }
-    }
-
-    private static MemoryStream[] LoadSoundResources(string[] resourceNames)
-    {
-        MemoryStream[] streams = new MemoryStream[resourceNames.Length];
-
-        for (int i = 0; i < resourceNames.Length; i++)
-        {
-            streams[i] = LoadSoundResource(resourceNames[i]);
-        }
-
-        return streams;
-    }
-
-    private static SoundPlayer[] CreatePlayers(MemoryStream[] streams)
-    {
-        SoundPlayer[] players = new SoundPlayer[streams.Length];
-
-        for (int i = 0; i < streams.Length; i++)
-        {
-            players[i] = new SoundPlayer(streams[i]);
-        }
-
-        return players;
-    }
-
-    private static MemoryStream LoadSoundResource(string resourceName)
-    {
-        Stream? resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
-
-        if (resource is null)
-        {
-            throw new InvalidOperationException($"Resource not found: {resourceName}");
-        }
-
-        MemoryStream stream = new();
-        resource.CopyTo(stream);
-        stream.Position = 0;
-        resource.Dispose();
-
-        return stream;
-    }
-
-    private static void PlayRandomSound(SoundPlayer[] players, MemoryStream[] streams)
-    {
-        int index = Random.Shared.Next(players.Length);
-        streams[index].Position = 0;
-        players[index].Play();
-    }
-
-    private static void DisposePlayers(SoundPlayer[] players)
-    {
-        foreach (SoundPlayer player in players)
-        {
-            player.Dispose();
-        }
-    }
-
-    private static void DisposeStreams(MemoryStream[] streams)
-    {
-        foreach (MemoryStream stream in streams)
-        {
-            stream.Dispose();
         }
     }
 }
