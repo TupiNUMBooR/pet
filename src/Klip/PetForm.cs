@@ -15,6 +15,7 @@ public sealed class PetForm : Form
     private readonly PetAudioPlayer audioPlayer = new();
 
     private PetMenuForm? menuForm;
+    private HelperForm? helperForm;
     private bool isPaused;
     private bool isExiting;
 
@@ -50,6 +51,7 @@ public sealed class PetForm : Form
 
     private const int MenuOffsetX = 24;
     private const int MenuOffsetY = 12;
+    private const int HelperGap = 12;
 
     protected override CreateParams CreateParams
     {
@@ -77,6 +79,7 @@ public sealed class PetForm : Form
     {
         base.OnShown(e);
         UpdateLayered();
+        ShowHelper();
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
@@ -85,6 +88,7 @@ public sealed class PetForm : Form
         timer.Dispose();
 
         CloseMenu();
+        CloseHelper();
         DisposeTray();
 
         audioPlayer.Dispose();
@@ -161,6 +165,22 @@ public sealed class PetForm : Form
         menuForm = null;
     }
 
+    private void CloseHelper()
+    {
+        if (helperForm is null)
+        {
+            return;
+        }
+
+        if (!helperForm.IsDisposed)
+        {
+            helperForm.Close();
+            helperForm.Dispose();
+        }
+
+        helperForm = null;
+    }
+
     private void OnTick(object? sender, EventArgs e)
     {
         double speed;
@@ -171,6 +191,7 @@ public sealed class PetForm : Form
 
             animator.Update(Environment.TickCount64, vx, speed, false);
             UpdateLayered();
+            RepositionHelper();
 
             if (IsOutsideScreen())
             {
@@ -195,6 +216,7 @@ public sealed class PetForm : Form
 
         UpdateMenuPosition();
         UpdateLayered();
+        RepositionHelper();
     }
 
     private double UpdateMovement()
@@ -338,6 +360,7 @@ public sealed class PetForm : Form
     private void StartExit()
     {
         CloseMenu();
+        CloseHelper();
 
         isPaused = false;
         isExiting = true;
@@ -470,6 +493,65 @@ public sealed class PetForm : Form
 
             NativeMethods.DeleteDC(memDc);
             NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
+        }
+    }
+
+    private void ShowHelper()
+    {
+        CloseHelper();
+
+        helperForm = new HelperForm();
+        helperForm.FormClosed += OnHelperClosed;
+        RepositionHelper();
+        helperForm.Show();
+        helperForm.BringToFront();
+    }
+
+    private void RepositionHelper()
+    {
+        if (helperForm is null || helperForm.IsDisposed)
+        {
+            return;
+        }
+
+        int petX = (int)Math.Round(x);
+        int petY = (int)Math.Round(y);
+
+        Rectangle area = Screen.FromPoint(new Point(
+            Math.Clamp(petX, -32000, 32000),
+            Math.Clamp(petY, -32000, 32000))).WorkingArea;
+
+        int helperX = petX + (Width - helperForm.Width) / 2;
+        int helperY = petY - helperForm.Height - HelperGap;
+
+        if (helperX < area.Left)
+        {
+            helperX = area.Left;
+        }
+
+        if (helperX + helperForm.Width > area.Right)
+        {
+            helperX = area.Right - helperForm.Width;
+        }
+
+        if (helperY < area.Top)
+        {
+            helperY = petY + Height + HelperGap;
+        }
+
+        helperForm.Location = new Point(helperX, helperY);
+    }
+
+    private void OnHelperClosed(object? sender, FormClosedEventArgs e)
+    {
+        if (sender is HelperForm closedHelper)
+        {
+            closedHelper.FormClosed -= OnHelperClosed;
+        }
+
+        if (ReferenceEquals(helperForm, sender))
+        {
+            helperForm = null;
         }
     }
 }
