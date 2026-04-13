@@ -126,8 +126,20 @@ public sealed class PetForm : Form
             Enabled = false
         };
 
+        var soundsItem = new ToolStripMenuItem("Sounds")
+        {
+            Checked = audioPlayer.SoundsEnabled,
+            CheckOnClick = true
+        };
+
+        soundsItem.CheckedChanged += (_, _) =>
+        {
+            audioPlayer.SoundsEnabled = soundsItem.Checked;
+        };
+
         trayMenu.Items.Add(versionItem);
         trayMenu.Items.Add(new ToolStripSeparator());
+        trayMenu.Items.Add(soundsItem);
         trayMenu.Items.Add("Exit", null, (_, _) => Close());
 
         trayIcon.ContextMenuStrip = trayMenu;

@@ -48,6 +48,8 @@ public sealed class PetAudioPlayer : IDisposable
         output.Play();
     }
 
+    public bool SoundsEnabled { get; set; } = true;
+
     public void PlayMeow()
     {
         Play(meowClip, 0.95f, 1.05f);
@@ -77,6 +79,8 @@ public sealed class PetAudioPlayer : IDisposable
 
     private void Play(CachedClip clip, float minPitch, float maxPitch)
     {
+        if (!SoundsEnabled) return;
+
         float pitch = RandomRange(minPitch, maxPitch);
 
         ISampleProvider input = new CachedClipSampleProvider(clip);
